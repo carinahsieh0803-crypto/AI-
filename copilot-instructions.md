@@ -1,10 +1,14 @@
-Stack: TypeScript (Strict), Next.js (App Router), Tailwind CSS, Supabase (Auth, PostgreSQL, Realtime), Vercel AI SDK.
-Structure: Routes in app/, raw UI in components/ui/, feature components in components/features/, scheduling and AI logic in lib/.
-Localization: All UI text must be Traditional Chinese (zh-TW) with Taiwan phrasing (使用者 not 用戶, 行程 not 日程, 類別 not 分類, 小組模式 not 團隊模式).
-Supabase Boundary: Client SDK for frontend (lib/supabase/client.ts); Server/Admin client for server only (lib/supabase/server.ts); enforce strict RLS.
+Stack: TypeScript (Strict), Next.js (App Router), Tailwind CSS, Supabase (Auth, PostgreSQL, Realtime), Vercel AI SDK, Zod.
+Structure: Routes in app/, raw UI in components/ui/, feature components in components/features/, scheduling and AI logic in lib/. Read ARCHITECTURE.md before writing code.
+Source of Truth: User Story.md is the requirement; every behavior must trace back to an AC id (AC-x.y-n). Do not add features that are not in User Story.md. If the MVP scope (ARCHITECTURE.md 7.2) does not include a story, do not implement it.
+Domains: Domain A = personal schedule (stories 1.x, 2.x; tables categories, events; code in lib/schedules, lib/ai, components/features/calendar|categories|ai-assistant). Domain B = group (stories 3.x, 4.x; tables groups, group_members, group_invites, group_events; code in lib/groups, components/features/groups). Only touch the domain you were asked to work on.
+Cross-domain Rule: Never query another domain's tables directly. Domain B may only get member schedules through getMemberBusyBlocks() and findFreeSlots() in lib/schedules (ARCHITECTURE.md 7.4).
+API Contract: Every route handler returns the Envelope from lib/api/response.ts ({ success, data } or { success: false, error: { code, message } }) with codes VALIDATION_ERROR(400), UNAUTHENTICATED(401), FORBIDDEN(403), NOT_FOUND(404), CONFLICT(409). Validate all input and output with Zod. Timestamps are ISO 8601 UTC. Do not change the contract without updating ARCHITECTURE.md first.
+Localization: All UI text must be Traditional Chinese (zh-TW) with Taiwan phrasing (使用者 not 用戶, 行程 not 日程, 類別 not 分類, 小組模式 not 團隊模式). Code identifiers stay in English.
+Supabase Boundary: Client SDK for frontend (lib/supabase/client.ts); Server client for server only (lib/supabase/server.ts); enforce strict RLS on every table.
 UI & Style: Use shadcn/ui; merge styles with cn(); stick strictly to CSS variables in globals.css.
-Logic & Deps: Keep UI presentational; extract AI tool definitions, conflict resolution, and group busy-matrix to lib/; no npm packages without approval.
-Testing: Test domain and scheduling logic with Vitest; cover critical journeys (AI command-to-schedule, group sync) with Playwright (tests/e2e/*.spec.ts).
-Verification: Run npm run lint, npm run test:unit, and npx playwright test before opening PRs.
-Git Commits: Follow Conventional Commits (feat:, fix:, refactor:, test:); keep changes atomic.
-Safety: Never commit service keys or .env* files; strictly protect member privacy (busy-only masking) in Group Mode; no destructive git commands.
+Logic & Deps: Keep UI presentational; extract AI tool definitions, conflict resolution, and group busy-matrix to lib/; no `any`; no npm packages without approval.
+AI Safety: The AI assistant may only produce a Proposal. Never write AI output to the database before the user confirms. Reject AI output that fails Zod validation.
+Testing: For every code change, add or update relevant unit tests with Vitest (tests/unit/*.test.ts) and end-to-end tests with Playwright (tests/e2e/*.spec.ts). Every test title must start with its AC id, e.g. "AC-1.2-3 結束時間不晚於開始時間時拒絕建立", and each AC needs at least one test; do not write tests that map to no AC. Success tests must assert the real changed value (database row or returned object); failure tests must assert the exact HTTP status and error code. Never write assert-nothing checks (toBeDefined, toBeTruthy on a whole object), never use test.skip, never swallow exceptions to make a test pass, and never write the test to match a wrong implementation: derive expected values from the AC. Run both `npm run test:unit` and `npx playwright test` before reporting the change complete; also run `npm run lint` before opening a PR. If a required test cannot run because the script, dependency, or environment is unavailable, state the blocker and do not report the tests as passing.
+Git Commits: Follow Conventional Commits (feat:, fix:, refactor:, test:, docs:); keep changes atomic; one story per branch (feat/<domain>-<story>), merge only via PR.
+Safety: Never commit service keys or .env* files; strictly protect member privacy (busy-only masking, done before data leaves the domain) in Group Mode; no destructive git commands.

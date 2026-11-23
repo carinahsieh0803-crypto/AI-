@@ -20,26 +20,29 @@
 │   │   ├── groups/                 # 小組模式 (小組清單、成員空檔檢視、共享行程)
 │   │   └── settings/               # 個人偏好設定與自訂類別管理
 │   ├── api/                        # Route Handlers (伺服器端 API 端點)
-│   │   ├── ai/schedule/            # AI 管家自然語言排程與 Function Calling 端點
-│   │   └── groups/                 # 小組成員邀請與權限 API
+│   │   ├── events/                 # 個人行程 CRUD（領域 A）
+│   │   ├── categories/             # 類別 CRUD（領域 A）
+│   │   ├── ai/schedule/            # AI 管家自然語言排程與 Function Calling 端點（領域 A）
+│   │   └── groups/                 # 小組、邀請、共享行程、空檔 API（領域 B）
 │   ├── layout.tsx                  # 全域根版型 (佈景主題與 Provider)
 │   └── globals.css                 # 全域樣式與 Tailwind CSS 變數 (Design Tokens)
 ├── components/
 │   ├── ui/                         # shadcn/ui 底層元件 (透過 CLI 安裝，純樣式原語)
 │   ├── common/                     # 全站共用元件 (如 Header、Sidebar、UserAvatar)
 │   └── features/                   # 依領域劃分的複合功能元件
-│       ├── calendar/               # 行事曆視圖與行程展示元件
-│       ├── groups/                 # 小組協作、成員清單與忙碌矩陣元件
-│       ├── ai-assistant/           # AI 管家對話面板與排程提案卡片
-│       └── categories/             # 類別標籤與色彩選擇元件
+│       ├── calendar/               # 行事曆視圖與行程展示元件（領域 A）
+│       ├── groups/                 # 小組協作、成員清單與忙碌矩陣元件（領域 B）
+│       ├── ai-assistant/           # AI 管家對話面板與排程提案卡片（領域 A）
+│       └── categories/             # 類別標籤與色彩選擇元件（領域 A）
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts               # Supabase Client SDK 初始化 (僅限瀏覽器端)
 │   │   ├── server.ts               # Supabase Server SDK 初始化 (僅限伺服器端)
 │   │   └── middleware.ts           # Session 更新與路由守衛中介邏輯
-│   ├── schedules/                  # 行程管理商業邏輯與衝突檢測演算法
-│   ├── groups/                     # 小組協作邏輯與隱私遮罩 (Busy-Matrix) 處理
-│   ├── ai/                         # AI 管家 Prompt 與 Tool 定義
+│   ├── schedules/                  # 行程管理商業邏輯與衝突檢測演算法（領域 A）
+│   ├── groups/                     # 小組協作邏輯與隱私遮罩 (Busy-Matrix) 處理（領域 B）
+│   ├── ai/                         # AI 管家 Prompt 與 Tool 定義（領域 A）
+│   ├── api/                        # 共用 API 回應 Envelope 與錯誤碼（合約守門員維護）
 │   └── utils.ts                    # 全域工具函式 (如 cn() class 合併器)
 ├── types/
 │   ├── database.types.ts           # Supabase CLI 自動生成之資料庫型別
@@ -88,7 +91,7 @@
 ---
 
 ## 5. 測試與驗收標準
-所有 Pull Request 在合併前必須通過以下驗證：
+每次程式碼變更都必須新增或更新相關單元測試與端對端測試，並在回報完成前執行兩種測試。所有 Pull Request 在合併前也必須通過以下驗證；若必要測試因指令、依賴套件或環境問題無法執行，必須明確回報阻礙，不得宣稱測試通過。
 1. **單元測試 (Vitest)：**
    - 指令：`npm run test:unit`
    - 範圍：`lib/` 中的排程衝突檢測演算法、隱私遮罩過濾器、時區轉換與工具函式。
@@ -98,6 +101,10 @@
 3. **安全規則驗證：**
    - 指令：`npm run test:db`
    - 範圍：驗證 Supabase RLS 策略，確保使用者無法越權讀寫其他使用者的私有行程或未加入之小組資料。
+4. **測試與驗收條件對應（AC 追溯）：**
+   - 每個測試案例名稱必須以 `AC-{Story編號}-{流水號}` 開頭（例如 `AC-1.1-2`），且能對應 `User Story.md` 中的一條驗收條件，不得有無對應的多餘測試，也不得有未被測試的 AC。
+   - 嚴禁 `assert True`、`expect(x).toBeDefined()` 這類不驗證實質結果的斷言；成功情境必須斷言資料庫或回傳物件的實際數值，失敗情境必須斷言具體的 HTTP 狀態碼與錯誤碼。
+   - 嚴禁為了讓 CI 通過而使用 `test.skip`、註解測試或吞掉例外。
 
 ---
 
@@ -128,3 +135,112 @@
 | **彈跳視窗 / 對話框** | 彈窗 / 浮窗 |
 | **程式 / 軟體** | 程序 / 軟件 |
 | **重新整理** | 刷新 |
+
+---
+
+## 7. 領域邊界與分工（Domain Boundaries）
+
+專案切成兩個垂直領域，兩位「領域全端協作者」各負責一個，從 UI、API 到資料庫一條龍。
+
+### 7.1 領域劃分
+
+| 項目 | 領域 A：個人排程 | 領域 B：小組協作 |
+| --- | --- | --- |
+| 負責 User Story | 1.1～1.4、2.1～2.3 | 3.1～3.3、4.1～4.3 |
+| 擁有的資料表 | `categories`、`events` | `groups`、`group_members`、`group_invites`、`group_events` |
+| 擁有的目錄 | `components/features/calendar`、`categories`、`ai-assistant`；`lib/schedules`、`lib/ai`；`app/api/events`、`categories`、`ai` | `components/features/groups`；`lib/groups`；`app/api/groups` |
+| 一句話 | 一個人的行事曆與 AI 管家 | 一群人的共享行程與隱私 |
+
+### 7.2 MVP 範圍（第一輪只做這些，其餘待 MVP 全綠後再排入）
+
+- **領域 A：** 1.1、1.2、1.3、2.1、2.3
+- **領域 B：** 3.1、3.2、3.3、4.1
+- **暫緩：** 1.4、2.2、4.2、4.3
+
+新增任何 MVP 以外的功能，需由「產品與規格設計師」同意並更新 `User Story.md` 後才能開發。
+
+### 7.3 跨領域規則（違反者 PR 一律退件）
+
+1. **嚴禁跨領域直接讀寫對方的資料表。** 領域 B 不得查詢 `events`，領域 A 不得查詢 `groups` 相關資料表。
+2. **跨領域資料只能透過 7.4 列出的官方出口取得。**
+3. **隱私遮罩在出口處完成。** 領域 B 永遠拿不到其他成員私有行程的標題、類別與備註。
+4. **每個領域的資料表都必須啟用 RLS，** 並有對應的 `npm run test:db` 測試。
+5. **共用的 `lib/api/`（回應 Envelope 與錯誤碼）只有「脈絡架構與合約守門員」能修改。**
+
+### 7.4 跨領域官方出口（領域 A 提供給領域 B）
+
+| 函式 | 位置 | 說明 |
+| --- | --- | --- |
+| `getMemberBusyBlocks(userIds, range)` | `lib/schedules/busy.ts` | 回傳指定成員在時間範圍內的忙碌時段 `{ userId, startAt, endAt, isMasked, title?, categoryId? }`。私有行程只回傳時間，`title` 與 `categoryId` 一律不出現；小組公開行程可帶完整資訊；呼叫者查自己時不遮罩。 |
+| `findFreeSlots(busyBlocks, durationMinutes, range)` | `lib/schedules/freeSlots.ts` | 純計算函式（不碰資料庫），輸入忙碌時段，輸出符合時長的空檔。供 4.2、4.3 使用。 |
+
+領域 B 呼叫 `getMemberBusyBlocks` 前，必須先驗證呼叫者與 `userIds` 都是同一小組成員（成員資料屬於領域 B）。
+
+---
+
+## 8. API 合約（Contract-First）
+
+### 8.1 共用回應格式（Envelope）
+
+所有 API 一律回傳以下格式，由 `lib/api/response.ts` 提供 `ok()` 與 `fail()` 輔助函式，禁止各自手寫：
+
+```ts
+// 成功
+{ "success": true, "data": <T> }
+
+// 失敗
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "結束時間必須晚於開始時間" } }
+```
+
+- `message` 為使用者可見文字，必須符合第 6 節台灣用語。
+- 時間欄位一律使用 ISO 8601 UTC 字串（例如 `2026-11-18T06:00:00.000Z`），畫面顯示時才轉為當地時區。
+- 所有請求內容與回應內容都必須有 Zod schema，定義於 `types/`。
+
+### 8.2 錯誤碼
+
+| HTTP | 錯誤碼 | 使用情境 |
+| --- | --- | --- |
+| 400 | `VALIDATION_ERROR` | 輸入無效值（空白、格式錯誤、時間順序錯誤、時長無效） |
+| 401 | `UNAUTHENTICATED` | 未登入 |
+| 403 | `FORBIDDEN` | 已登入但權限不足 |
+| 404 | `NOT_FOUND` | 找不到資源 |
+| 409 | `CONFLICT` | 時間衝突或重複操作 |
+
+### 8.3 領域 A 端點
+
+| 方法與路徑 | 用途 | 對應 AC |
+| --- | --- | --- |
+| `GET /api/events?from=&to=&categoryIds=` | 查詢個人行程（可依類別篩選） | AC-1.2-1、1.2-4、1.2-5 |
+| `POST /api/events` | 建立行程 | AC-1.2-1、1.2-2、1.2-3 |
+| `PATCH /api/events/:id` | 修改行程（含時間、是否小組公開） | AC-1.4-x（暫緩）、AC-1.2-5 |
+| `GET /api/categories` | 查詢預設與自訂類別 | AC-1.3-1 |
+| `POST /api/categories` | 新增自訂類別 | AC-1.3-1～1.3-4 |
+| `POST /api/ai/schedule` | 送出自然語言指令，回傳提案（不寫入） | AC-2.1-1～2.1-5 |
+| `POST /api/ai/schedule/confirm` | 確認提案並寫入，需具冪等性 | AC-2.3-1～2.3-4 |
+
+### 8.4 領域 B 端點
+
+| 方法與路徑 | 用途 | 對應 AC |
+| --- | --- | --- |
+| `POST /api/groups` | 建立小組並產生邀請連結 | AC-3.1-1、3.1-2 |
+| `GET /api/groups` | 查詢自己加入的小組 | AC-3.2-1、3.2-2 |
+| `POST /api/groups/join` | 以邀請碼加入小組 | AC-3.1-1、3.1-3、3.1-4、3.1-5 |
+| `GET /api/groups/:id/events` | 查詢小組日曆（含遮罩後的成員忙碌時段） | AC-3.2-1、3.2-3、4.1-1～4.1-4 |
+| `POST /api/groups/:id/events` | 新增小組共享行程 | AC-3.3-1～3.3-3 |
+
+### 8.5 資料表概要（欄位細節由各領域在 migration 中定義）
+
+| 資料表 | 擁有者 | 關鍵欄位 |
+| --- | --- | --- |
+| `categories` | A | `id`、`owner_id`、`name`、`color`、`is_default` |
+| `events` | A | `id`、`owner_id`、`category_id`、`title`、`start_at`、`end_at`、`is_group_public` |
+| `groups` | B | `id`、`name`、`owner_id` |
+| `group_members` | B | `group_id`、`user_id`、`role` |
+| `group_invites` | B | `code`、`group_id`、`expires_at` |
+| `group_events` | B | `id`、`group_id`、`created_by`、`title`、`start_at`、`end_at` |
+
+### 8.6 合約變更流程
+
+1. 任何人要改 API 或資料表，先在 Issue 提出，由「脈絡架構與合約守門員」確認。
+2. 先更新本檔案與 Zod schema，再改程式。
+3. 合約變更的 PR 必須同時通知另一個領域的全端與整合者審查。

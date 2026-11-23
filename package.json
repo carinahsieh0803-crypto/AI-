@@ -1,28 +1,30 @@
 {
-  "name": "ai-schedule",
+  "name": "riri-schedule",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "test": "npm run test:unit && npm run test:e2e",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
     "test:unit": "vitest run",
-    "test:unit:watch": "vitest",
-    "test:unit:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test --pass-with-no-tests",
-    "test:e2e:ui": "playwright test --ui",
-    "test:e2e:report": "playwright show-report",
-    "lint": "eslint ."
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
-    "@types/node": "^24.10.1",
-    "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.0",
-    "@vitejs/plugin-react": "^5.0.4",
-    "@vitest/coverage-v8": "^3.2.4",
-    "eslint": "^9.39.1",
-    "jsdom": "^26.1.0",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.46.3",
-    "vitest": "^3.2.4"
+    "@playwright/test": "^1.65.1",
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "4.3.3",
+    "typescript": "^5",
+    "vitest": "^4.1.12"
   }
 }
