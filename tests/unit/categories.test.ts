@@ -23,7 +23,7 @@ describe("custom schedule categories", () => {
     expect(isValidHexColor("#123")).toBe(false);
   });
 
-  it("enforces the category name length boundary", () => {
+  it("AC-1.3-2 enforces the category name length boundary", () => {
     expect(isValidCategoryName("a".repeat(50), [], 50)).toBe(true);
     expect(isValidCategoryName("a".repeat(51), [], 50)).toBe(false);
   });
