@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type FormEvent, useState } from "react";
+import { createClient } from "../../lib/supabase/client";
 
 type AuthMode = "login" | "register";
 type FieldErrors = {
@@ -14,8 +15,9 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
   const isRegister = mode === "register";
   const [errors, setErrors] = useState<FieldErrors>({});
   const [notice, setNotice] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  function submitForm(event: FormEvent<HTMLFormElement>) {
+  async function submitForm(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setNotice("");
 
@@ -46,11 +48,31 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    setNotice(
-      isRegister
-        ? "目前尚未連接驗證服務，帳號尚未建立。"
-        : "目前尚未連接驗證服務，尚未登入。",
-    );
+    if (isRegister) {
+      setNotice("目前尚未連接驗證服務，帳號尚未建立。");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await createClient().auth.signInWithPassword({ email, password });
+      if (error) {
+        if (error.code === "email_not_confirmed") {
+          setNotice("此電子郵件尚未完成驗證，請先至信箱點擊驗證連結。");
+        } else if (error.code === "invalid_credentials") {
+          setNotice("帳號或密碼錯誤，請重新確認後再試。");
+        } else {
+          setNotice("登入服務目前無法使用，請稍後再試。");
+        }
+        return;
+      }
+
+      window.location.assign(new URL("/", window.location.href));
+    } catch {
+      setNotice("登入服務目前無法使用，請稍後再試。");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function handleGoogleSignIn() {
@@ -120,8 +142,8 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
             </label>
           )}
 
-          <button className="auth-submit" type="submit">
-            {isRegister ? "建立帳號" : "登入"}
+          <button className="auth-submit" disabled={isSubmitting} type="submit">
+            {isSubmitting ? "登入中..." : isRegister ? "建立帳號" : "登入"}
           </button>
         </form>
 

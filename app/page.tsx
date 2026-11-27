@@ -2,6 +2,7 @@
 
 import { type FormEvent, type ReactNode, useMemo, useState, useSyncExternalStore } from "react";
 import { hasTimeConflict, isValidTimeRange } from "@/lib/schedules";
+import { LogoutButton } from "@/components/common/logout-button";
 
 type Category = {
   id: string;
@@ -365,6 +366,7 @@ export default function Home() {
             <button className="icon-button top-icon notification-button" aria-label="通知"><Icon name="bell" /><i /></button>
             <span className="top-divider" />
             <button className="profile-avatar top-avatar" aria-label="個人設定">林</button>
+            <LogoutButton />
           </div>
         </header>
 
